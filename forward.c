@@ -69,9 +69,7 @@ void app_main_loop_fw(void) {
 	uint32_t table_id;
 	uint32_t i;
 
-	RTE_LOG(INFO, USER1,
-		"Core %u is doing FW\n",
-		rte_lcore_id());
+	RTE_LOG(INFO, USER1, "Core %u is doing FW\n", rte_lcore_id());
 
 	/* Pipeline configuration */
 	p = rte_pipeline_create(&pipeline_params);
@@ -93,8 +91,7 @@ void app_main_loop_fw(void) {
 		};
 
 		if (rte_pipeline_port_in_create(p, &port_params, &port_in_id[i]))
-			rte_panic("Unable to configure input port for "
-				"ring %d\n", i);
+			rte_panic("Unable to configure input port for ring %d\n", i);
 	}
 
 	/* Output port configuration */
@@ -112,8 +109,7 @@ void app_main_loop_fw(void) {
 		};
 
 		if (rte_pipeline_port_out_create(p, &port_params, &port_out_id[i]))
-			rte_panic("Unable to configure output port for "
-				"ring %d\n", i);
+			rte_panic("Unable to configure output port for ring %d\n", i);
 	}
 
 	/* Table configuration */
@@ -145,8 +141,8 @@ void app_main_loop_fw(void) {
 	for (i = 0; i < app.n_ports; i++)
 		if (rte_pipeline_port_in_connect_to_table(p, port_in_id[i],
 			table_id))
-			rte_panic("Unable to connect input port %u to "
-				"table %u\n", port_in_id[i],  table_id);
+			rte_panic("Unable to connect input port %u to table %u\n",
+				port_in_id[i],  table_id);
 
 	/* Add entries to tables */
 	for (i = 0; i < app.n_ports; i++) {
