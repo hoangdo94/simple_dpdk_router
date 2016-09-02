@@ -93,11 +93,15 @@ int app_parse_args(int argc, char **argv)
 				return -1;
 			}
 			break;
-
+		case 0:
+			app.track_packets = 1;
+			break;
 		default:
 			return -1;
 		}
 	}
+
+	RTE_LOG(INFO, USER1, "Packets tracking is %s\n", app.track_packets?"enabled":"disabled");
 
 	if (optind >= 0)
 		argv[optind - 1] = prgname;
