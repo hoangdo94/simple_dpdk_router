@@ -179,7 +179,7 @@ void app_main_loop_fw(void) {
 		uint32_t dst_mask =
 			rule_params.field_value[DST_FIELD_IPV4].mask_range.u32;
 
-		printf("Adding rule to ACL table (IPv4 destination = "
+		RTE_LOG(INFO, ACL, "Adding rule to ACL table (IPv4 destination = "
 			"%u.%u.%u.%u/%u => port out = %u)\n",
 			(dst_addr & 0xFF000000) >> 24,
 			(dst_addr & 0x00FF0000) >> 16,
