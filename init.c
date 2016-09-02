@@ -112,9 +112,7 @@ static void app_init_rings(void) {
 
 }
 
-static void
-app_ports_check_link(void)
-{
+static void app_ports_check_link(void) {
 	uint32_t all_ports_up, i;
 
 	all_ports_up = 1;
@@ -139,9 +137,7 @@ app_ports_check_link(void)
 		rte_panic("Some NIC ports are DOWN\n");
 }
 
-static void
-app_init_ports(void)
-{
+static void app_init_ports(void) {
 	uint32_t i;
 
 	/* Init NIC ports, then start the ports */
@@ -199,9 +195,7 @@ app_init_ports(void)
 	app_ports_check_link();
 }
 
-void
-app_init(void)
-{
+void app_init(void) {
 	app_init_mbuf_pools();
 	app_init_rings();
 	app_init_ports();

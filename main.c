@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-int app_lcore_main_loop(__attribute__((unused)) void *arg){
+int app_lcore_main_loop(__attribute__((unused)) void *arg) {
 	unsigned lcore;
 
 	lcore = rte_lcore_id();

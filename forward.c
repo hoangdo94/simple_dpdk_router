@@ -70,7 +70,7 @@ void app_main_loop_fw(void) {
 	uint32_t i;
 
 	RTE_LOG(INFO, USER1,
-		"Core %u is doing Forward\n",
+		"Core %u is doing FW\n",
 		rte_lcore_id());
 
 	/* Pipeline configuration */
