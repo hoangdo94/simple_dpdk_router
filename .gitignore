@@ -3,6 +3,7 @@
 *.ko
 *.obj
 *.elf
+*.o.*
 
 # Precompiled Headers
 *.gch
@@ -27,7 +28,17 @@
 *.i*86
 *.x86_64
 *.hex
+*.cmd
 
 # Debug files
 *.dSYM/
 *.su
+
+# Builds
+build/
+_install
+_postbuild
+_postinstall
+_preinstall
+simple_router
+simple_router.map
