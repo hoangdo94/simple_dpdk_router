@@ -41,6 +41,21 @@ static int app_parse_port_mask(const char *arg) {
 	return 0;
 }
 
+static int app_parse_burst_size(const char *arg) {
+	int burst_size = atoi(arg);
+	if (!rte_is_power_of_2(burst_size))
+		return -5;
+
+	app.burst_size_rx_read = burst_size;
+	app.burst_size_rx_write = burst_size;
+	app.burst_size_fw_read = burst_size;
+	app.burst_size_fw_write = burst_size;
+	app.burst_size_tx_read = burst_size;
+	app.burst_size_tx_write = burst_size;
+
+	return 0;
+}
+
 int app_parse_args(int argc, char **argv)
 {
 	int opt, ret;
@@ -84,11 +99,17 @@ int app_parse_args(int argc, char **argv)
 
 	app.track_packets = 0;
 
-	while ((opt = getopt_long(argc, argvopt, "p:",
+	while ((opt = getopt_long(argc, argvopt, "p:b:",
 			lgopts, &option_index)) != EOF) {
 		switch (opt) {
 		case 'p':
 			if (app_parse_port_mask(optarg) < 0) {
+				app_print_usage();
+				return -1;
+			}
+			break;
+		case 'b':
+			if (app_parse_burst_size(optarg) < 0) {
 				app_print_usage();
 				return -1;
 			}
@@ -101,6 +122,7 @@ int app_parse_args(int argc, char **argv)
 		}
 	}
 
+	RTE_LOG(INFO, USER1, "Burst size is %d\n", app.burst_size_fw_write);
 	RTE_LOG(INFO, USER1, "Packets tracking is %s\n", app.track_packets?"enabled":"disabled");
 
 	if (optind >= 0)

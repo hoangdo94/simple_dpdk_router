@@ -159,10 +159,13 @@ void app_main_loop_fw(void) {
 		/* Set the rule values */
 		rule_params.field_value[SRC_FIELD_IPV4].value.u32 = 0;
 		rule_params.field_value[SRC_FIELD_IPV4].mask_range.u32 = 0;
+		// rule_params.field_value[DST_FIELD_IPV4].value.u32 =
+		// 	i << (24 - __builtin_popcount(app.n_ports - 1));
 		rule_params.field_value[DST_FIELD_IPV4].value.u32 =
-			i << (24 - __builtin_popcount(app.n_ports - 1));
-		rule_params.field_value[DST_FIELD_IPV4].mask_range.u32 =
-			8 + __builtin_popcount(app.n_ports - 1);
+			(table_entry.port_id)?3232236032:3232236288;
+		// rule_params.field_value[DST_FIELD_IPV4].mask_range.u32 =
+		// 	8 + __builtin_popcount(app.n_ports - 1);
+		rule_params.field_value[DST_FIELD_IPV4].mask_range.u32 = 24;
 		rule_params.field_value[SRCP_FIELD_IPV4].value.u16 = 0;
 		rule_params.field_value[SRCP_FIELD_IPV4].mask_range.u16 =
 			UINT16_MAX;
