@@ -2,7 +2,16 @@
 
 struct app_params app;
 
-static const char usage[] = "\n";
+static const char usage[] = "Usage: ./simple-router [EAL options]"
+ 														" -- [Router options]\n"
+														" - EAL options: \n"
+														"\t+ -c: coremask, must specify 3 cores\n"
+														"\t+ -n: number of channel, default 4\n"
+														" - Router options: \n"
+														"\t+ -p: portmask, must specify 2 or 4 ports\n"
+														"\t+ -b: burst size, must be power of 2,"
+														" default 64\n"
+														"\t+ --track-packets: enable packets tracking\n";
 
 void app_print_usage(void) {
 	printf(usage);
@@ -104,13 +113,11 @@ int app_parse_args(int argc, char **argv)
 		switch (opt) {
 		case 'p':
 			if (app_parse_port_mask(optarg) < 0) {
-				app_print_usage();
 				return -1;
 			}
 			break;
 		case 'b':
 			if (app_parse_burst_size(optarg) < 0) {
-				app_print_usage();
 				return -1;
 			}
 			break;
