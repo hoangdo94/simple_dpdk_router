@@ -89,11 +89,4 @@ void app_main_loop_rx(void);
 void app_main_loop_fw(void);
 void app_main_loop_tx(void);
 
-#define APP_FLUSH 0
-#ifndef APP_FLUSH
-#define APP_FLUSH 0x3FF
-#endif
-
-#define APP_METADATA_OFFSET(offset) (sizeof(struct rte_mbuf) + (offset))
-
 #endif /* _MAIN_H_ */

@@ -10,10 +10,8 @@ enum {
 };
 
 /*
- * Here we define the 'shape' of the data we're searching for,
- * by defining the meta-data of the ACL rules.
- * in this case, we're defining 5 tuples. IP addresses, ports,
- * and protocol.
+ * Meta-data of the ACL rules
+ * 5 tuples: IP addresses, ports, and protocol.
  */
 struct rte_acl_field_def ipv4_field_formats[NUM_FIELDS_IPV4] = {
 	{
@@ -115,11 +113,10 @@ void app_main_loop_fw(void) {
 	/* Table configuration */
 	{
 		struct rte_table_acl_params table_acl_params = {
-			.name = "simple-rules", /* unique identifier for acl contexts */
+			.name = "simple-rules",
 			.n_rules = 1 << 5,
 			.n_rule_fields = DIM(ipv4_field_formats),
 		};
-
 		/* Copy in the rule meta-data defined above into the params */
 		memcpy(table_acl_params.field_format, ipv4_field_formats,
 			sizeof(ipv4_field_formats));
@@ -159,12 +156,8 @@ void app_main_loop_fw(void) {
 		/* Set the rule values */
 		rule_params.field_value[SRC_FIELD_IPV4].value.u32 = 0;
 		rule_params.field_value[SRC_FIELD_IPV4].mask_range.u32 = 0;
-		// rule_params.field_value[DST_FIELD_IPV4].value.u32 =
-		// 	i << (24 - __builtin_popcount(app.n_ports - 1));
 		rule_params.field_value[DST_FIELD_IPV4].value.u32 =
 			(table_entry.port_id)?3232236032:3232236288;
-		// rule_params.field_value[DST_FIELD_IPV4].mask_range.u32 =
-		// 	8 + __builtin_popcount(app.n_ports - 1);
 		rule_params.field_value[DST_FIELD_IPV4].mask_range.u32 = 24;
 		rule_params.field_value[SRCP_FIELD_IPV4].value.u16 = 0;
 		rule_params.field_value[SRCP_FIELD_IPV4].mask_range.u16 =
@@ -191,7 +184,6 @@ void app_main_loop_fw(void) {
 			dst_mask,
 			table_entry.port_id);
 
-		/* For ACL, add needs an rte_table_acl_rule_add_params struct */
 		ret = rte_pipeline_table_entry_add(p, table_id, &rule_params,
 			&table_entry, &key_found, &entry_ptr);
 		if (ret < 0)
@@ -210,15 +202,6 @@ void app_main_loop_fw(void) {
 		rte_panic("Pipeline consistency check failed\n");
 
 	/* Run-time */
-#if APP_FLUSH == 0
 	for ( ; ; )
 		rte_pipeline_run(p);
-#else
-	for (i = 0; ; i++) {
-		rte_pipeline_run(p);
-
-		if ((i & APP_FLUSH) == 0)
-			rte_pipeline_flush(p);
-	}
-#endif
 }
