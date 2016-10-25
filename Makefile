@@ -7,7 +7,8 @@ ifeq ($(CONFIG_RTE_LIBRTE_PIPELINE),y)
 #
 APP = simple_router
 
-CFLAGS += -O3
+CFLAGS += -g 
+#CFLAGS += -DHYP
 CFLAGS += $(WERROR_FLAGS)
 
 #
@@ -20,6 +21,7 @@ SRCS-y += track.c
 SRCS-y += receive.c
 SRCS-y += transmit.c
 SRCS-y += forward.c
+SRCS-y += hypervisor.c
 
 # this application needs libraries first
 DEPDIRS-y += lib drivers

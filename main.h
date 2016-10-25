@@ -24,6 +24,7 @@
 #include <rte_port_ring.h>
 #include <rte_table_acl.h>
 #include <rte_pipeline.h>
+#include <rte_cycles.h>
 
 #ifndef APP_MBUF_ARRAY_SIZE
 #define APP_MBUF_ARRAY_SIZE 256
