@@ -72,7 +72,7 @@ int app_parse_args(int argc, char **argv)
 	int option_index;
 	char *prgname = argv[0];
 	static struct option lgopts[] = {
-		{"track-packets", 0, 0, 0},
+		{0, 0, 0, 0},
 		{NULL, 0, 0, 0}
 	};
 	uint32_t lcores[3], n_lcores, lcore_id;
@@ -106,9 +106,9 @@ int app_parse_args(int argc, char **argv)
 	/* Non-EAL args */
 	argvopt = argv;
 
-	app.track_packets = 0;
+	app.rule_path = "rules.conf";
 
-	while ((opt = getopt_long(argc, argvopt, "p:b:",
+	while ((opt = getopt_long(argc, argvopt, "p:b:r",
 			lgopts, &option_index)) != EOF) {
 		switch (opt) {
 		case 'p':
@@ -121,8 +121,8 @@ int app_parse_args(int argc, char **argv)
 				return -1;
 			}
 			break;
-		case 0:
-			app.track_packets = 1;
+		case 'r':
+			app.rule_path = optarg;
 			break;
 		default:
 			return -1;
@@ -130,8 +130,7 @@ int app_parse_args(int argc, char **argv)
 	}
 
 	RTE_LOG(INFO, USER1, "Burst size is %d\n", app.burst_size_fw_write);
-	RTE_LOG(INFO, USER1, "Packets tracking is %s\n", app.track_packets?"enabled":"disabled");
-
+	
 	if (optind >= 0)
 		argv[optind - 1] = prgname;
 

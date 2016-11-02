@@ -75,8 +75,8 @@ struct app_params {
 	uint32_t burst_size_tx_read;
 	uint32_t burst_size_tx_write;
 
-  /* Track packets */
-  uint32_t track_packets;
+	/* rule path */
+	char *rule_path;
 
 } __rte_cache_aligned;
 
