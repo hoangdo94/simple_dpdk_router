@@ -1,5 +1,24 @@
 #include "main.h"
 
+#define ACL_LEAD_CHAR				('@')
+#define ROUTE_LEAD_CHAR				('R')
+#define COMMENT_LEAD_CHAR			('#')
+#define ROUTE_ENTRY_LINE_MEMBERS	7
+#define ACL_ENTRY_LINE_MEMBERS		6
+#define ROUTE_ENTRY_PRIORITY		1
+#define ACL_ENTRY_PRIORITY			2
+
+#define GET_CB_FIELD(in, fd, base, lim, dlm)	do {            \
+	unsigned long val;                                      \
+	char *end;                                              \
+	errno = 0;                                              \
+	val = strtoul((in), &end, (base));                      \
+	if (errno != 0 || end[0] != (dlm) || val > (lim))       \
+		return -EINVAL;                               \
+	(fd) = (typeof(fd))val;                                 \
+	(in) = end + 1;                                         \
+} while (0)
+
 enum {
 	PROTO_FIELD_IPV4,
 	SRC_FIELD_IPV4,
@@ -54,6 +73,202 @@ struct rte_acl_field_def ipv4_field_formats[NUM_FIELDS_IPV4] = {
 			sizeof(uint16_t),
 	},
 };
+
+static int parse_ipv4_net(const char *in, uint32_t *addr, uint32_t *mask_len) {
+	uint8_t a, b, c, d, m;
+
+	GET_CB_FIELD(in, a, 0, UINT8_MAX, '.');
+	GET_CB_FIELD(in, b, 0, UINT8_MAX, '.');
+	GET_CB_FIELD(in, c, 0, UINT8_MAX, '.');
+	GET_CB_FIELD(in, d, 0, UINT8_MAX, '/');
+	GET_CB_FIELD(in, m, 0, sizeof(uint32_t) * CHAR_BIT, 0);
+
+	addr[0] = IPv4(a, b, c, d);
+	mask_len[0] = m;
+
+	return 0;
+}
+
+static int parse_range(const char *in, const char splitter, uint32_t *lo, uint32_t *hi) {
+	uint32_t a, b;
+
+	GET_CB_FIELD(in, a, 0, UINT32_MAX, splitter);
+	GET_CB_FIELD(in, b, 0, UINT32_MAX, 0);
+
+	lo[0] = a;
+	hi[0] = b;
+
+	return 0;
+}
+
+static inline int is_bypass_line(char *buff) {
+	int i = 0;
+
+	/* comment line */
+	if (buff[0] == COMMENT_LEAD_CHAR)
+		return 1;
+	/* empty line */
+	while (buff[i] != '\0') {
+		if (!isspace(buff[i]))
+			return 0;
+		i++;
+	}
+	return 1;
+}
+
+static int parse_rule_members(char *str, char **in, int dim) {
+	int i;
+	char *s, *sp;
+	static const char *dlm = " \t\n";
+	s = str;
+
+	for (i = 0; i != dim; i++, s = NULL) {
+		in[i] = strtok_r(s, dlm, &sp);
+		if (in[i] == NULL)
+			return -EINVAL;
+	}
+	
+	return 0;
+}
+
+static int add_route_rule(char *buff, struct rte_pipeline *p, uint32_t table_id) {
+	char *in[ROUTE_ENTRY_LINE_MEMBERS];
+	uint32_t addr, mask, lo, hi;
+	int rc, key_found;
+
+	parse_rule_members(buff, in, ROUTE_ENTRY_LINE_MEMBERS);
+
+	struct rte_pipeline_table_entry table_entry = {
+	 	.action = RTE_PIPELINE_ACTION_PORT,
+	 	{.port_id = atoi(in[6])}
+	};
+	struct rte_table_acl_rule_add_params rule_params;
+	struct rte_pipeline_table_entry *entry_ptr;
+
+	memset(&rule_params, 0, sizeof(rule_params));
+
+	printf("%s %s %s %s %s %s %s\n",
+		in[0], in[1], in[2], in[3], in[4], in[5], in[6]);
+
+	/* Set the rule values */
+	parse_ipv4_net(in[1], &addr, &mask);
+	rule_params.field_value[SRC_FIELD_IPV4].value.u32 = addr;
+	rule_params.field_value[SRC_FIELD_IPV4].mask_range.u32 = mask;
+
+	parse_ipv4_net(in[2], &addr, &mask);
+	rule_params.field_value[DST_FIELD_IPV4].value.u32 = addr;
+	rule_params.field_value[DST_FIELD_IPV4].mask_range.u32 = mask;
+
+	parse_range(in[3], ':', &lo, &hi);
+	rule_params.field_value[SRCP_FIELD_IPV4].value.u16 = lo;
+	rule_params.field_value[SRCP_FIELD_IPV4].mask_range.u16 = hi;
+
+	parse_range(in[4], ':', &lo, &hi);
+	rule_params.field_value[DSTP_FIELD_IPV4].value.u16 = lo;
+	rule_params.field_value[DSTP_FIELD_IPV4].mask_range.u16 = hi;
+
+	parse_range(in[5], '/', &lo, &hi);
+	rule_params.field_value[PROTO_FIELD_IPV4].value.u8 = lo;
+	rule_params.field_value[PROTO_FIELD_IPV4].mask_range.u8 = hi;
+
+	rule_params.priority = ROUTE_ENTRY_PRIORITY;
+
+	rc = rte_pipeline_table_entry_add(p, table_id, &rule_params,
+		&table_entry, &key_found, &entry_ptr);
+	if (rc < 0)
+		rte_panic("Unable to add entry to table %u (%d)\n",
+				table_id, rc);
+
+	return rc;
+}
+
+static int add_acl_rule(char *buff, struct rte_pipeline *p, uint32_t table_id) {
+	char *in[ACL_ENTRY_LINE_MEMBERS];
+	uint32_t addr, mask, lo, hi;
+	int rc, key_found;
+
+	parse_rule_members(buff, in, ACL_ENTRY_LINE_MEMBERS);
+
+	struct rte_pipeline_table_entry table_entry = {
+	 	.action = RTE_PIPELINE_ACTION_DROP
+	};
+	struct rte_table_acl_rule_add_params rule_params;
+	struct rte_pipeline_table_entry *entry_ptr;
+
+	memset(&rule_params, 0, sizeof(rule_params));
+
+	printf("%s %s %s %s %s %s %s\n",
+		in[0], in[1], in[2], in[3], in[4], in[5], in[6]);
+
+	/* Set the rule values */
+	parse_ipv4_net(in[1], &addr, &mask);
+	rule_params.field_value[SRC_FIELD_IPV4].value.u32 = addr;
+	rule_params.field_value[SRC_FIELD_IPV4].mask_range.u32 = mask;
+
+	parse_ipv4_net(in[2], &addr, &mask);
+	rule_params.field_value[DST_FIELD_IPV4].value.u32 = addr;
+	rule_params.field_value[DST_FIELD_IPV4].mask_range.u32 = mask;
+
+	parse_range(in[3], ':', &lo, &hi);
+	rule_params.field_value[SRCP_FIELD_IPV4].value.u16 = lo;
+	rule_params.field_value[SRCP_FIELD_IPV4].mask_range.u16 = hi;
+
+	parse_range(in[4], ':', &lo, &hi);
+	rule_params.field_value[DSTP_FIELD_IPV4].value.u16 = lo;
+	rule_params.field_value[DSTP_FIELD_IPV4].mask_range.u16 = hi;
+
+	parse_range(in[5], '/', &lo, &hi);
+	rule_params.field_value[PROTO_FIELD_IPV4].value.u8 = lo;
+	rule_params.field_value[PROTO_FIELD_IPV4].mask_range.u8 = hi;
+
+	rule_params.priority = ACL_ENTRY_PRIORITY;
+
+	rc = rte_pipeline_table_entry_add(p, table_id, &rule_params,
+		&table_entry, &key_found, &entry_ptr);
+	if (rc < 0)
+		rte_panic("Unable to add entry to table %u (%d)\n",
+				table_id, rc);
+
+	return rc;
+}
+
+static void add_table_entries(struct rte_pipeline *p, uint32_t table_id) {
+	char buff[LINE_MAX];
+	
+	FILE *fh = fopen(app.rule_path, "rb");
+	unsigned int i = 0;
+
+	if (fh == NULL)
+		rte_exit(EXIT_FAILURE, "%s: Open %s failed\n", __func__,
+			app.rule_path);
+	
+	i = 0;
+	while (fgets(buff, LINE_MAX, fh) != NULL) {
+		i++;
+
+		if (is_bypass_line(buff))
+			continue;
+
+		char s = buff[0];
+
+		/* Route entry */
+		if (s == ROUTE_LEAD_CHAR) {
+			add_route_rule(buff, p, table_id);
+		}
+		/* ACL entry */
+		else if (s == ACL_LEAD_CHAR) {
+			add_acl_rule(buff, p, table_id);
+		}
+		/* Illegal line */
+		else
+			rte_exit(EXIT_FAILURE,
+				"%s Line %u: should start with leading "
+				"char %c or %c\n",
+				app.rule_path, i, ROUTE_LEAD_CHAR, ACL_LEAD_CHAR);
+	}
+
+	fclose(fh);
+}
 
 void app_main_loop_fw(void) {
 	struct rte_pipeline_params pipeline_params = {
@@ -142,54 +357,56 @@ void app_main_loop_fw(void) {
 				port_in_id[i],  table_id);
 
 	/* Add entries to tables */
-	for (i = 0; i < app.n_ports; i++) {
-		struct rte_pipeline_table_entry table_entry = {
-			.action = RTE_PIPELINE_ACTION_PORT,
-			{.port_id = port_out_id[i & (app.n_ports - 1)]},
-		};
-		struct rte_table_acl_rule_add_params rule_params;
-		struct rte_pipeline_table_entry *entry_ptr;
-		int key_found, ret;
+	// for (i = 0; i < app.n_ports; i++) {
+	// 	struct rte_pipeline_table_entry table_entry = {
+	// 		.action = RTE_PIPELINE_ACTION_PORT,
+	// 		{.port_id = port_out_id[i & (app.n_ports - 1)]},
+	// 	};
+	// 	struct rte_table_acl_rule_add_params rule_params;
+	// 	struct rte_pipeline_table_entry *entry_ptr;
+	// 	int key_found, ret;
 
-		memset(&rule_params, 0, sizeof(rule_params));
+	// 	memset(&rule_params, 0, sizeof(rule_params));
 
-		/* Set the rule values */
-		rule_params.field_value[SRC_FIELD_IPV4].value.u32 = 0;
-		rule_params.field_value[SRC_FIELD_IPV4].mask_range.u32 = 0;
-		rule_params.field_value[DST_FIELD_IPV4].value.u32 =
-			(table_entry.port_id)?3232236032:3232236288;
-		rule_params.field_value[DST_FIELD_IPV4].mask_range.u32 = 24;
-		rule_params.field_value[SRCP_FIELD_IPV4].value.u16 = 0;
-		rule_params.field_value[SRCP_FIELD_IPV4].mask_range.u16 =
-			UINT16_MAX;
-		rule_params.field_value[DSTP_FIELD_IPV4].value.u16 = 0;
-		rule_params.field_value[DSTP_FIELD_IPV4].mask_range.u16 =
-			UINT16_MAX;
-		rule_params.field_value[PROTO_FIELD_IPV4].value.u8 = 0;
-		rule_params.field_value[PROTO_FIELD_IPV4].mask_range.u8 = 0;
+	// 	/* Set the rule values */
+	// 	rule_params.field_value[SRC_FIELD_IPV4].value.u32 = 0;
+	// 	rule_params.field_value[SRC_FIELD_IPV4].mask_range.u32 = 0;
+	// 	rule_params.field_value[DST_FIELD_IPV4].value.u32 =
+	// 		(table_entry.port_id)?3232236032:3232236288;
+	// 	rule_params.field_value[DST_FIELD_IPV4].mask_range.u32 = 24;
+	// 	rule_params.field_value[SRCP_FIELD_IPV4].value.u16 = 0;
+	// 	rule_params.field_value[SRCP_FIELD_IPV4].mask_range.u16 =
+	// 		UINT16_MAX;
+	// 	rule_params.field_value[DSTP_FIELD_IPV4].value.u16 = 0;
+	// 	rule_params.field_value[DSTP_FIELD_IPV4].mask_range.u16 =
+	// 		UINT16_MAX;
+	// 	rule_params.field_value[PROTO_FIELD_IPV4].value.u8 = 0;
+	// 	rule_params.field_value[PROTO_FIELD_IPV4].mask_range.u8 = 0;
 
-		rule_params.priority = 0;
+	// 	rule_params.priority = 0;
 
-		uint32_t dst_addr = rule_params.field_value[DST_FIELD_IPV4].
-			value.u32;
-		uint32_t dst_mask =
-			rule_params.field_value[DST_FIELD_IPV4].mask_range.u32;
+	// 	uint32_t dst_addr = rule_params.field_value[DST_FIELD_IPV4].
+	// 		value.u32;
+	// 	uint32_t dst_mask =
+	// 		rule_params.field_value[DST_FIELD_IPV4].mask_range.u32;
 
-		RTE_LOG(INFO, ACL, "Adding rule to ACL table (IPv4 destination = "
-			"%u.%u.%u.%u/%u => port out = %u)\n",
-			(dst_addr & 0xFF000000) >> 24,
-			(dst_addr & 0x00FF0000) >> 16,
-			(dst_addr & 0x0000FF00) >> 8,
-			dst_addr & 0x000000FF,
-			dst_mask,
-			table_entry.port_id);
+	// 	RTE_LOG(INFO, ACL, "Adding rule to ACL table (IPv4 destination = "
+	// 		"%u.%u.%u.%u/%u => port out = %u)\n",
+	// 		(dst_addr & 0xFF000000) >> 24,
+	// 		(dst_addr & 0x00FF0000) >> 16,
+	// 		(dst_addr & 0x0000FF00) >> 8,
+	// 		dst_addr & 0x000000FF,
+	// 		dst_mask,
+	// 		table_entry.port_id);
 
-		ret = rte_pipeline_table_entry_add(p, table_id, &rule_params,
-			&table_entry, &key_found, &entry_ptr);
-		if (ret < 0)
-			rte_panic("Unable to add entry to table %u (%d)\n",
-				table_id, ret);
-	}
+	// 	ret = rte_pipeline_table_entry_add(p, table_id, &rule_params,
+	// 		&table_entry, &key_found, &entry_ptr);
+	// 	if (ret < 0)
+	// 		rte_panic("Unable to add entry to table %u (%d)\n",
+	// 			table_id, ret);
+	// }
+
+	add_table_entries(p, table_id);
 
 	/* Enable input ports */
 	for (i = 0; i < app.n_ports; i++)
