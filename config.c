@@ -3,15 +3,15 @@
 struct app_params app;
 
 static const char usage[] = "Usage: ./simple-router [EAL options]"
- 														" -- [Router options]\n"
-														" - EAL options: \n"
-														"\t+ -c: coremask, must specify 3 cores\n"
-														"\t+ -n: number of channel, default 4\n"
-														" - Router options: \n"
-														"\t+ -p: portmask, must specify 2 or 4 ports\n"
-														"\t+ -b: burst size, must be power of 2,"
-														" default 64\n"
-														"\t+ --track-packets: enable packets tracking\n";
+ 			" -- [Router options]\n"
+			" - EAL options: \n"
+			"\t+ -c: coremask, must specify 3 cores\n"
+			"\t+ -n: number of channel, default 4\n"
+			" - Router options: \n"
+			"\t+ -p: portmask, must specify 2 or 4 ports\n"
+			"\t+ -b: burst size, must be power of 2,"
+			" default 64\n"
+			"\t+ -r: rule path, default\"rules.conf\"\n";
 
 void app_print_usage(void) {
 	printf(usage);
