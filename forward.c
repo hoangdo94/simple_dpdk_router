@@ -1,5 +1,6 @@
 #include "main.h"
 
+#define DEFAULT_RULE_PATH			"rules.conf"
 #define ACL_LEAD_CHAR				('@')
 #define ROUTE_LEAD_CHAR				('R')
 #define COMMENT_LEAD_CHAR			('#')
@@ -234,8 +235,8 @@ static int add_acl_rule(char *buff, struct rte_pipeline *p, uint32_t table_id) {
 
 static void add_table_entries(struct rte_pipeline *p, uint32_t table_id) {
 	char buff[LINE_MAX];
-	
-	FILE *fh = fopen(app.rule_path, "rb");
+
+	FILE *fh = fopen(app.rule_path?app.rule_path:DEFAULT_RULE_PATH, "rb");
 	unsigned int i = 0;
 
 	if (fh == NULL)
