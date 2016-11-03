@@ -106,7 +106,7 @@ int app_parse_args(int argc, char **argv)
 	/* Non-EAL args */
 	argvopt = argv;
 
-	app.rule_path = "rules.conf";
+	strcpy(app.rule_path, "rules.conf");
 
 	while ((opt = getopt_long(argc, argvopt, "p:b:r",
 			lgopts, &option_index)) != EOF) {

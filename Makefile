@@ -17,7 +17,6 @@ CFLAGS += $(WERROR_FLAGS)
 SRCS-y := main.c
 SRCS-y += config.c
 SRCS-y += init.c
-SRCS-y += track.c
 SRCS-y += receive.c
 SRCS-y += transmit.c
 SRCS-y += forward.c

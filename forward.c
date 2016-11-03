@@ -5,8 +5,8 @@
 #define COMMENT_LEAD_CHAR			('#')
 #define ROUTE_ENTRY_LINE_MEMBERS	7
 #define ACL_ENTRY_LINE_MEMBERS		6
-#define ROUTE_ENTRY_PRIORITY		1
-#define ACL_ENTRY_PRIORITY			2
+#define ROUTE_ENTRY_PRIORITY		0x1
+#define ACL_ENTRY_PRIORITY			0x0
 
 #define GET_CB_FIELD(in, fd, base, lim, dlm)	do {            \
 	unsigned long val;                                      \
@@ -197,8 +197,8 @@ static int add_acl_rule(char *buff, struct rte_pipeline *p, uint32_t table_id) {
 
 	memset(&rule_params, 0, sizeof(rule_params));
 
-	printf("%s %s %s %s %s %s %s\n",
-		in[0], in[1], in[2], in[3], in[4], in[5], in[6]);
+	printf("%s %s %s %s %s %s\n",
+		in[0], in[1], in[2], in[3], in[4], in[5]);
 
 	/* Set the rule values */
 	parse_ipv4_net(in[1], &addr, &mask);
@@ -272,7 +272,7 @@ static void add_table_entries(struct rte_pipeline *p, uint32_t table_id) {
 
 void app_main_loop_fw(void) {
 	struct rte_pipeline_params pipeline_params = {
-		.name = "pipeline",
+		.name = "simple-pipeline",
 		.socket_id = rte_socket_id(),
 	};
 
@@ -357,55 +357,6 @@ void app_main_loop_fw(void) {
 				port_in_id[i],  table_id);
 
 	/* Add entries to tables */
-	// for (i = 0; i < app.n_ports; i++) {
-	// 	struct rte_pipeline_table_entry table_entry = {
-	// 		.action = RTE_PIPELINE_ACTION_PORT,
-	// 		{.port_id = port_out_id[i & (app.n_ports - 1)]},
-	// 	};
-	// 	struct rte_table_acl_rule_add_params rule_params;
-	// 	struct rte_pipeline_table_entry *entry_ptr;
-	// 	int key_found, ret;
-
-	// 	memset(&rule_params, 0, sizeof(rule_params));
-
-	// 	/* Set the rule values */
-	// 	rule_params.field_value[SRC_FIELD_IPV4].value.u32 = 0;
-	// 	rule_params.field_value[SRC_FIELD_IPV4].mask_range.u32 = 0;
-	// 	rule_params.field_value[DST_FIELD_IPV4].value.u32 =
-	// 		(table_entry.port_id)?3232236032:3232236288;
-	// 	rule_params.field_value[DST_FIELD_IPV4].mask_range.u32 = 24;
-	// 	rule_params.field_value[SRCP_FIELD_IPV4].value.u16 = 0;
-	// 	rule_params.field_value[SRCP_FIELD_IPV4].mask_range.u16 =
-	// 		UINT16_MAX;
-	// 	rule_params.field_value[DSTP_FIELD_IPV4].value.u16 = 0;
-	// 	rule_params.field_value[DSTP_FIELD_IPV4].mask_range.u16 =
-	// 		UINT16_MAX;
-	// 	rule_params.field_value[PROTO_FIELD_IPV4].value.u8 = 0;
-	// 	rule_params.field_value[PROTO_FIELD_IPV4].mask_range.u8 = 0;
-
-	// 	rule_params.priority = 0;
-
-	// 	uint32_t dst_addr = rule_params.field_value[DST_FIELD_IPV4].
-	// 		value.u32;
-	// 	uint32_t dst_mask =
-	// 		rule_params.field_value[DST_FIELD_IPV4].mask_range.u32;
-
-	// 	RTE_LOG(INFO, ACL, "Adding rule to ACL table (IPv4 destination = "
-	// 		"%u.%u.%u.%u/%u => port out = %u)\n",
-	// 		(dst_addr & 0xFF000000) >> 24,
-	// 		(dst_addr & 0x00FF0000) >> 16,
-	// 		(dst_addr & 0x0000FF00) >> 8,
-	// 		dst_addr & 0x000000FF,
-	// 		dst_mask,
-	// 		table_entry.port_id);
-
-	// 	ret = rte_pipeline_table_entry_add(p, table_id, &rule_params,
-	// 		&table_entry, &key_found, &entry_ptr);
-	// 	if (ret < 0)
-	// 		rte_panic("Unable to add entry to table %u (%d)\n",
-	// 			table_id, ret);
-	// }
-
 	add_table_entries(p, table_id);
 
 	/* Enable input ports */
