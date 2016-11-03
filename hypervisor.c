@@ -1,6 +1,6 @@
 #include "hypervisor.h"
 
-static int get_vmmcall_number (void* b)
+static int get_vmmcall_number (const char *b)
 {
 	int r;
 	asm volatile ("vmcall"
