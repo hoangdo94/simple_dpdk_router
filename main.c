@@ -38,34 +38,30 @@ int app_lcore_main_loop(__attribute__((unused)) void *arg) {
 	lcore = rte_lcore_id();
 
 	if (lcore == app.core_rx) {
-		#ifdef HYP
-		test_call();
-		#endif
-
 		app_main_loop_rx();
     	return 0;
 	}
 
 	if (lcore == app.core_fw) {
 		#ifdef HYP
-		test_call();
+		// MMIO regions
+		// MMIO addresses get from /proc/uioX filesystem
+		uint64_t nic_1_mmio_addr = 0xE1A80000;
+		uint64_t nic_2_mmio_addr = 0xE1B80000;
+		// Device-specific information. Refer to the NIC datasheet
+		uint64_t tx_offset = 0xE000; 
+		uint64_t tx_size = 0x1000;
 
-		//isolate MMIO regions
-		// request_reserve_memory(0xe1b00000, 0x20000, GUEST_PHYS);
-		// request_reserve_memory(0xe1b20000, 0x20000, GUEST_PHYS);
-		// request_reserve_memory(0xe1a40000, 0x40000, GUEST_PHYS);
-		// request_reserve_memory(0xe1ac0000, 0x40000, GUEST_PHYS);
+		request_reserve_memory(nic_1_mmio_addr + tx_offset, tx_size, GUEST_PHYS);
+		request_reserve_memory(nic_2_mmio_addr + tx_offset, tx_size, GUEST_PHYS);
 		#endif
-
 	 	app_main_loop_fw();
 	 	return 0;
 	}
 
 	if (lcore == app.core_tx) {
 		#ifdef	HYP
-		test_call();
-
-		//isolate TX descriptors
+		// TX descriptors
 		int eth_dev_count = rte_eth_dev_count();
 		int i;
 		for (i=0; i<eth_dev_count; i++) {
@@ -73,16 +69,36 @@ int app_lcore_main_loop(__attribute__((unused)) void *arg) {
 			int j;
 			for (j=0; j<dev->data->nb_tx_queues; j++) {
 				void *txq = dev->data->tx_queues[j];
-				//Magic numbers (for e1000 driver)
+				/* * * * * * * * * * * * * * * * * * * * 
+				 * struct igb_tx_queue {
+				 * 	volatile union e1000_adv_tx_desc *tx_ring; 
+				 * 	uint64_t               tx_ring_phys_addr; -> +4
+				 * 	struct igb_tx_entry    *sw_ring;
+				 * 	volatile uint32_t      *tdt_reg_addr; 
+				 * 	uint32_t               txd_type;
+				 * 	uint16_t               nb_tx_desc; -> +24
+				 * 	uint16_t               tx_tail;
+				 * 	uint16_t               tx_head;
+				 * 	uint16_t               queue_id;
+				 * 	uint16_t               reg_idx; 
+				 * 	uint8_t                port_id;
+				 * 	uint8_t                pthresh;
+				 * 	uint8_t                hthresh;
+				 * 	uint8_t                wthresh;
+				 * 	uint32_t               ctx_curr;
+				 * 	uint32_t               ctx_start;
+				 * 	struct igb_advctx_info ctx_cache[IGB_CTX_NUM];
+				 * }; 
+				 * * * * * * * * * * * * * * * * * * * */
 				uint64_t *addr = (uint64_t *) ((uint64_t) txq + 4);
-				uint64_t *nb = (uint64_t *) ((uint64_t) txq + 20);
-				uint64_t struct_size = 16;
+				uint64_t *nb = (uint64_t *) ((uint64_t) txq + 24);
+				uint64_t entry_size = 16;
 
 				ulong start_addr = (ulong) *addr;
-				ulong size = (ulong) (*nb) * struct_size;
+				ulong size = (ulong) (*nb) * entry_size;
 				printf("request");
-				printf("\tstart_addr %lx", start_addr);
-				printf("\tsize %lx\n", size);
+				printf("\tstart_addr %08lX", start_addr);
+				printf("\tsize %d\n", size);
 				request_reserve_memory(start_addr, size, GUEST_PHYS);
 			}
 		}

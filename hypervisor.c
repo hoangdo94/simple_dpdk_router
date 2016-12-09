@@ -48,3 +48,29 @@ int test_call(void) {
 
 	return 0;
 }
+
+
+int print_proc_maps(void) {
+	FILE* proc_maps = fopen("/proc/self/maps", "r");
+
+	char line[256];
+	ulong start_address;
+	ulong end_address;
+	char perm[4];
+	int is_binary;
+
+	while (fgets(line, 256, proc_maps) != NULL)
+	{
+		if(strstr(line, __progname) != NULL) {
+			is_binary = 1;
+		} else {
+			is_binary = 0;
+		}
+		sscanf(line, "%08lx-%08lx %s\n", &start_address, &end_address, perm);
+		printf("%08lx %08lx %s %d\n", start_address, end_address, perm, is_binary);
+	}
+	
+	fclose(proc_maps);
+
+	return 0;
+}

@@ -60,7 +60,7 @@ static struct rte_eth_txconf tx_conf = {
 	.tx_thresh = {
 		.pthresh = 36,
 		.hthresh = 0,
-		.wthresh = 0,
+		.wthresh = 4,
 	},
 	.tx_free_thresh = 0,
 	.tx_rs_thresh = 0,

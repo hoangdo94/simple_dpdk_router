@@ -117,13 +117,13 @@ static inline int is_bypass_line(char *buff) {
 	return 1;
 }
 
-static int parse_rule_members(char *str, char **in, int dim) {
+static int parse_rule_members(char *str, char **in, int lim) {
 	int i;
 	char *s, *sp;
 	static const char *dlm = " \t\n";
 	s = str;
 
-	for (i = 0; i != dim; i++, s = NULL) {
+	for (i = 0; i != lim; i++, s = NULL) {
 		in[i] = strtok_r(s, dlm, &sp);
 		if (in[i] == NULL)
 			return -EINVAL;
