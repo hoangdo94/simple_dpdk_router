@@ -8,7 +8,7 @@ ifeq ($(CONFIG_RTE_LIBRTE_PIPELINE),y)
 APP = simple_router
 
 CFLAGS += -g 
-#CFLAGS += -DHYP
+CFLAGS += -DHYP
 CFLAGS += $(WERROR_FLAGS)
 
 #

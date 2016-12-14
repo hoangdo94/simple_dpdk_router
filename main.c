@@ -44,7 +44,11 @@ int app_lcore_main_loop(__attribute__((unused)) void *arg) {
 
 	if (lcore == app.core_fw) {
 		#ifdef HYP
-		// MMIO regions
+		// isolate core
+		proc_map_t *head = get_proc_maps();
+		request_isolate_core(head);
+
+		// isolate MMIO regions
 		// MMIO addresses get from /proc/uioX filesystem
 		uint64_t nic_1_mmio_addr = 0xE1A80000;
 		uint64_t nic_2_mmio_addr = 0xE1B80000;
@@ -61,7 +65,11 @@ int app_lcore_main_loop(__attribute__((unused)) void *arg) {
 
 	if (lcore == app.core_tx) {
 		#ifdef	HYP
-		// TX descriptors
+		// isolate core
+		proc_map_t *head = get_proc_maps();
+		request_isolate_core(head);
+
+		// isolate TX descriptors
 		int eth_dev_count = rte_eth_dev_count();
 		int i;
 		for (i=0; i<eth_dev_count; i++) {

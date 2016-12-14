@@ -12,13 +12,13 @@ enum mem_type_t {
 typedef unsigned long ulong;
 typedef enum mem_type_t mem_type;
 
-struct proc_map {
-	struct proc_map *next;
+typedef struct proc_map {
 	ulong start_addr;
 	ulong end_addr;
 	int need_remap;
-};
+	struct proc_map *next;
+} proc_map_t;
 
 int request_reserve_memory(ulong start_addr, ulong size, mem_type type);
-int test_call(void);
-int print_proc_maps(void);
+int request_isolate_core(proc_map_t *head);
+proc_map_t *get_proc_maps(void);
